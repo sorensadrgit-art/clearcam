@@ -122,3 +122,29 @@ test('evaluateSquatBiomechanics detects parallel torso-shank alignment vs excess
   assert.equal(excessiveLean.isParallel, false);
   assert.equal(excessiveLean.alignmentScore, 'TORSO LEAN');
 });
+
+for (const is3D of [false, true]) {
+  test(`squat alignment compares segment directions in ${is3D ? '3D' : '2D'}`, () => {
+    const landmarks = Array(33).fill(null);
+    landmarks[JOINTS.leftHip] = { x: 0, y: 0, z: 0 };
+    landmarks[JOINTS.rightHip] = { x: 0, y: 0, z: 0 };
+    const shoulder = is3D ? { x: 0, y: -1, z: 1 } : { x: 1, y: -1, z: 0 };
+    landmarks[JOINTS.leftShoulder] = { ...shoulder };
+    landmarks[JOINTS.rightShoulder] = { ...shoulder };
+    landmarks[JOINTS.leftAnkle] = { x: 0, y: 1, z: 0 };
+    landmarks[JOINTS.leftKnee] = { x: shoulder.x, y: 0, z: shoulder.z };
+    const options = { kneeAngle: 90, trunkAngle: 45, shankAngle: 45, landmarks, is3D, width: 100, height: 100 };
+    assert.equal(evaluateSquatBiomechanics(options).diffDeg, 0);
+    // Opposite horizontal/depth lean has the same unsigned inclination.
+    landmarks[JOINTS.leftKnee].x *= -1;
+    landmarks[JOINTS.leftKnee].z *= -1;
+    const opposing = evaluateSquatBiomechanics(options);
+    assert.equal(opposing.diffDeg, 90);
+    assert.equal(opposing.isParallel, false);
+    landmarks[JOINTS.leftKnee].visibility = 0.7;
+    assert.equal(evaluateSquatBiomechanics({ ...options, threshold: 0.8 }).diffDeg, null);
+    assert.equal(evaluateSquatBiomechanics({ ...options, landmarks: null }).alignmentScore, 'MEASURING');
+    landmarks[JOINTS.leftKnee] = { ...landmarks[JOINTS.leftAnkle] };
+    assert.equal(evaluateSquatBiomechanics(options).diffDeg, null);
+  });
+}

@@ -243,7 +243,10 @@ export function calculateShankAngle3D(worldLandmarks, side = 'left', threshold =
  * Evaluates squat segment alignment: parallel torso and shin lines vs excessive forward lean.
  * In biomechanics, balanced squats maintain parallel torso and shank vectors (diff <= 10 deg).
  */
-export function evaluateSquatBiomechanics({ kneeAngle, trunkAngle, shankAngle } = {}) {
+export function evaluateSquatBiomechanics({
+  kneeAngle, trunkAngle, shankAngle,
+  landmarks, is3D = false, width = 640, height = 480, side = 'left', threshold = 0.55,
+} = {}) {
   if (!Number.isFinite(kneeAngle)) {
     return { isParallel: false, alignmentScore: 'UNKNOWN', diffDeg: null };
   }
@@ -255,7 +258,38 @@ export function evaluateSquatBiomechanics({ kneeAngle, trunkAngle, shankAngle } 
     return { isParallel: false, alignmentScore: 'MEASURING', diffDeg: null };
   }
 
-  const diffDeg = Math.round(Math.abs(trunkAngle - shankAngle) * 10) / 10;
+  // Scalar-only callers retain their inclination comparison. With landmarks,
+  // compare both segments pointing upward: hip to shoulder, ankle to knee.
+  let difference = Math.abs(trunkAngle - shankAngle);
+  if (landmarks !== undefined) {
+    const ls = landmarks?.[JOINTS.leftShoulder];
+    const rs = landmarks?.[JOINTS.rightShoulder];
+    const lh = landmarks?.[JOINTS.leftHip];
+    const rh = landmarks?.[JOINTS.rightHip];
+    const knee = landmarks?.[side === 'right' ? JOINTS.rightKnee : JOINTS.leftKnee];
+    const ankle = landmarks?.[side === 'right' ? JOINTS.rightAnkle : JOINTS.leftAnkle];
+    const check = is3D ? reliable3D : reliable;
+    if (![ls, rs, lh, rh, knee, ankle].every(p => check(p, threshold))) {
+      return { isParallel: false, alignmentScore: 'MEASURING', diffDeg: null };
+    }
+    const origin = { x: 0, y: 0, z: 0 };
+    const trunk = {
+      x: (ls.x + rs.x - lh.x - rh.x) / 2,
+      y: (ls.y + rs.y - lh.y - rh.y) / 2,
+      z: ((ls.z ?? 0) + (rs.z ?? 0) - (lh.z ?? 0) - (rh.z ?? 0)) / 2,
+    };
+    const shank = {
+      x: knee.x - ankle.x, y: knee.y - ankle.y,
+      z: (knee.z ?? 0) - (ankle.z ?? 0),
+    };
+    difference = is3D
+      ? angle3DAt(trunk, origin, shank)
+      : angleAt(trunk, origin, shank, width, height);
+    if (difference === null) {
+      return { isParallel: false, alignmentScore: 'MEASURING', diffDeg: null };
+    }
+  }
+  const diffDeg = Math.round(difference * 10) / 10;
   const isParallel = diffDeg <= 10.0;
 
   let alignmentScore = 'OPTIMAL';

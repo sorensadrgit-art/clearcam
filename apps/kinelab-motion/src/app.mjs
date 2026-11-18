@@ -258,12 +258,13 @@ function renderTelemetry(angles, smoothedLandmarks = null, worldLandmarks = null
   }
 
   // Segment angles (Trunk & Shank) and Squat Alignment Evaluation
+  const { confidenceThreshold } = settings.get().tracking;
   const trunk = is3D && worldLandmarks
-    ? calculateTrunkAngle3D(worldLandmarks)
-    : calculateTrunkAngle(smoothedLandmarks, width, height);
+    ? calculateTrunkAngle3D(worldLandmarks, confidenceThreshold)
+    : calculateTrunkAngle(smoothedLandmarks, width, height, confidenceThreshold);
   const shank = is3D && worldLandmarks
-    ? calculateShankAngle3D(worldLandmarks, 'left')
-    : calculateShankAngle(smoothedLandmarks, width, height, 'left');
+    ? calculateShankAngle3D(worldLandmarks, 'left', confidenceThreshold)
+    : calculateShankAngle(smoothedLandmarks, width, height, 'left', confidenceThreshold);
 
   if (nodes.valTrunkLean) {
     nodes.valTrunkLean.textContent = Number.isFinite(trunk) ? `${Math.round(trunk)}°` : '—';
@@ -273,7 +274,11 @@ function renderTelemetry(angles, smoothedLandmarks = null, worldLandmarks = null
   }
   if (nodes.valSquatAlign) {
     const knee = dominantKneeAngle(angles);
-    const evalResult = evaluateSquatBiomechanics({ kneeAngle: knee, trunkAngle: trunk, shankAngle: shank });
+    const evalResult = evaluateSquatBiomechanics({
+      kneeAngle: knee, trunkAngle: trunk, shankAngle: shank,
+      landmarks: is3D && worldLandmarks ? worldLandmarks : smoothedLandmarks,
+      is3D: Boolean(is3D && worldLandmarks), width, height, threshold: confidenceThreshold,
+    });
     nodes.valSquatAlign.textContent = evalResult.alignmentScore;
     nodes.valSquatAlign.classList.toggle('warn', evalResult.alignmentScore === 'TORSO LEAN');
   }
@@ -515,6 +520,9 @@ function frameLoop() {
     // Supply target pose to 60/120 FPS interpolator
     if (smoothedLandmarks) {
       interpolator.setTarget(smoothedLandmarks, now);
+    } else {
+      interpolator.reset();
+      overlay.clear();
     }
 
     appState.lastAngles = angles;
@@ -584,6 +592,8 @@ function stopCamera() {
   runner.close();
   overlay.clear();
   filter.reset();
+  kinematicFilter.reset();
+  interpolator.reset();
   perf.reset();
   adaptive.reset();
 
@@ -1136,6 +1146,7 @@ function populateSettingsForm() {
   if (nodes.cfgExerciseVoice) {
     nodes.cfgExerciseVoice.checked = Boolean(cfg.exercise.voiceCoach);
   }
+  audio.setVoiceCoachEnabled(Boolean(cfg.exercise.voiceCoach));
 
   const usage = storage.getStorageEstimate();
   const kb = Math.round(usage.bytes / 1024);

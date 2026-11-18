@@ -46,3 +46,36 @@ test('KinematicBoneFilter safely handles occluded or missing joints without drif
   assert.ok(res);
   assert.equal(res[JOINTS.leftHip].visibility, 0.2);
 });
+
+test('chained corrections preserve original segment directions and calibration measurements', () => {
+  const filter = new KinematicBoneFilter();
+  const pose = () => {
+    const points = Array(33).fill(null);
+    points[JOINTS.leftShoulder] = { x: 0, y: -0.5, z: 0 };
+    points[JOINTS.leftHip] = { x: 0, y: 0, z: 0 };
+    points[JOINTS.leftKnee] = { x: 0, y: 0.4, z: 0 };
+    points[JOINTS.leftAnkle] = { x: 0, y: 0.8, z: 0 };
+    return points;
+  };
+  for (let i = 0; i < 20; i++) filter.filter(pose());
+  const noisy = pose();
+  noisy[JOINTS.leftHip].z = 0.4;
+  noisy[JOINTS.leftKnee].z = 0.4;
+  noisy[JOINTS.leftAnkle].z = 0.4;
+  const original = structuredClone(noisy);
+  const out = filter.filter(noisy);
+  assert.notEqual(out[JOINTS.leftHip].z, noisy[JOINTS.leftHip].z);
+  for (const [parent, child] of [[JOINTS.leftHip, JOINTS.leftKnee], [JOINTS.leftKnee, JOINTS.leftAnkle]]) {
+    assert.equal(out[child].z, out[parent].z);
+    assert.ok(Math.abs(out[child].y - out[parent].y - 0.4) < 1e-10);
+  }
+  assert.equal(filter.getCalibratedLengths().leftThigh, 0.4);
+  assert.equal(filter.getCalibratedLengths().leftShank, 0.4);
+  assert.deepEqual(noisy, original);
+  filter.reset();
+  assert.ok(Object.values(filter.getCalibratedLengths()).every(length => length === null));
+  const nextPerson = pose();
+  nextPerson[JOINTS.leftKnee].y = 0.6;
+  filter.filter(nextPerson);
+  assert.equal(filter.getCalibratedLengths().leftThigh, 0.6);
+});

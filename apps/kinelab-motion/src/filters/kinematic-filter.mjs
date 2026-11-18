@@ -91,8 +91,8 @@ export class KinematicBoneFilter {
 
     // 1. Update calibration and enforce constraints on kinematic segments
     for (const seg of KINEMATIC_SEGMENTS) {
-      const pParent = out[seg.parent];
-      const pChild = out[seg.child];
+      const pParent = worldLandmarks[seg.parent];
+      const pChild = worldLandmarks[seg.child];
 
       if (!this.isReliable(pParent) || !this.isReliable(pChild)) {
         continue;
@@ -121,9 +121,11 @@ export class KinematicBoneFilter {
         const targetLen = segData.length;
         const scale = targetLen / measuredDist;
 
-        pChild.x = pParent.x + dx * scale;
-        pChild.y = pParent.y + dy * scale;
-        pChild.z = (pParent.z ?? 0) + dz * scale;
+        const correctedParent = out[seg.parent];
+        const correctedChild = out[seg.child];
+        correctedChild.x = correctedParent.x + dx * scale;
+        correctedChild.y = correctedParent.y + dy * scale;
+        correctedChild.z = (correctedParent.z ?? 0) + dz * scale;
       }
     }
 
