@@ -1,0 +1,32 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+#
+# Deploys the KineLab Motion studio (apps/kinelab-motion) as a static site.
+# The app has no build step: it is plain HTML/CSS/ES modules and loads the
+# MediaPipe SDK and pose models from their CDNs at runtime.
+#
+# The Python NVR (clearcam.py) is intentionally not deployed here: it needs
+# ffmpeg, a GPU and access to an RTSP camera on the same network.
+services:
+  - type: web
+    name: cam-tracker
+    runtime: static
+    buildCommand: echo "no build step - static assets are committed"
+    staticPublishPath: ./apps/kinelab-motion
+    headers:
+      # ES modules must be served as JavaScript or the browser refuses them.
+      - path: /*.mjs
+        name: Content-Type
+        value: text/javascript; charset=utf-8
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      # getUserMedia and the motion sensors are only used by this page itself.
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(self), microphone=(), geolocation=(), accelerometer=(self), gyroscope=(self)
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache

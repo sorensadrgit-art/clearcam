@@ -46,13 +46,13 @@ if __name__ == "__main__": # todo, use different file
     def get_cross_thread(id):
         try:
             if id == 0:
-              resp = cache_db.run_get("links", None, timeout=2)
+              resp = cache_db.run_get("links", None)
               responses.append(("links", resp))
             elif id == 1:
-              resp = cache_db.run_get("max_storage", "all", timeout=2)
+              resp = cache_db.run_get("max_storage", "all")
               responses.append(("max_storage", resp))
             else:
-              resp = cache_db.run_get("settings", None, timeout=2)
+              resp = cache_db.run_get("settings", None)
               responses.append(("settings", resp))
         except Exception as e:
             responses.append((f"thread{id}", f"ERROR: {e}"))
