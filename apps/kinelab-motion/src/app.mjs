@@ -18,6 +18,7 @@ import {
   bilateralSide,
 } from './biomechanics/angle-calculations.mjs';
 import { ViewOrientationEstimator, blendAnglesByView } from './biomechanics/view-orientation.mjs';
+import { computeFrameAngles } from './biomechanics/frame-angles.mjs';
 import { WorldPoseFilter } from './filters/world-pose-filter.mjs';
 import { defaultFramingAssistant } from './tracking/framing-assistant.mjs';
 import { analyzeSymmetry } from './biomechanics/symmetry-analyzer.mjs';
@@ -737,21 +738,19 @@ function processFrame(video, callNow, metadata) {
     appState.lastFraming = framing;
 
     // Angles: 'auto' blends precise 2D image angles (side views) with 3D world angles
-    // (oblique views) per joint; '3d' and '2d' force one source.
-    const angles2D = getJointAngles(smoothedLandmarks, video.videoWidth, video.videoHeight, cfg.tracking.confidenceThreshold);
+    // (oblique views) per joint; '3d' and '2d' force one source. Selection (and the
+    // per-joint source behind each angle) lives in biomechanics/frame-angles.mjs.
     const mode = cfg.tracking.angleDimension;
-    let angles = angles2D;
-    if (mode !== '2d' && constrainedWorldLandmarks) {
-      const angles3D = getJointAngles3D(constrainedWorldLandmarks, cfg.tracking.confidenceThreshold);
-      if (mode === 'auto') {
-        angles = blendAnglesByView(angles2D, angles3D, view);
-      } else {
-        angles = { ...angles2D };
-        for (const [k, v] of Object.entries(angles3D)) {
-          if (Number.isFinite(v)) angles[k] = v;
-        }
-      }
-    }
+    const { angles } = computeFrameAngles({
+      landmarks: smoothedLandmarks,
+      worldLandmarks: constrainedWorldLandmarks,
+      width: video.videoWidth,
+      height: video.videoHeight,
+      threshold: cfg.tracking.confidenceThreshold,
+      mode,
+      view,
+      includeSources: false, // hot path: live frames don't consume the source map
+    });
     const use3DSegments = mode === '3d' || (mode === 'auto' && view.sagittal2DWeight < 0.5);
 
     // Supply target pose to 60/120 FPS interpolator (null clears it when the person leaves frame)

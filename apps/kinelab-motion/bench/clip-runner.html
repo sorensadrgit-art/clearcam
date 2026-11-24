@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Paired-clip bench — local files only</title>
+  <style>
+    body { font: 16px/1.5 system-ui, sans-serif; margin: 1.5rem auto; max-width: 44rem; padding: 0 1rem; color: #16181d; }
+    fieldset { border: 1px solid #c8ccd4; border-radius: 6px; margin: 0 0 1rem; }
+    legend { font-weight: 600; padding: 0 .4rem; }
+    label { display: block; margin: .6rem 0 .15rem; }
+    input, select, button { font: inherit; }
+    input[type="number"], input[type="text"], select { box-sizing: border-box; max-width: 22rem; width: 100%; padding: .3rem .45rem; }
+    button { margin: .8rem .5rem 0 0; padding: .45rem 1rem; }
+    button[disabled] { opacity: .55; }
+    video { display: block; max-width: 100%; margin: .8rem 0; background: #000; }
+    #bench-status { margin-top: 1rem; padding: .6rem .8rem; background: #eef1f6; border-radius: 6px; min-height: 1.5rem; }
+    .note { color: #4a4f59; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Paired-clip bench</h1>
+    <p class="note">
+      Samples one clip twice (Adaptive, then Direct) from a local file and exports one
+      paired JSON. The clip never leaves this browser: it is read through a local URL
+      and there are no uploads.
+    </p>
+
+    <video id="clip-video" preload="auto" playsinline muted controls aria-label="Local clip preview"></video>
+    <p class="note">
+      If the preview holds a blank first frame, press Play once — some browsers reveal the
+      first frame only after playback. Bench seeking works regardless.
+    </p>
+
+    <form id="bench-form">
+      <fieldset>
+        <legend>Clip</legend>
+        <label for="clip-file">Clip file (local video)</label>
+        <input id="clip-file" type="file" accept="video/*" required>
+        <label for="clip-duration">Sampled duration (seconds)</label>
+        <input id="clip-duration" type="number" min="0.1" step="0.1" value="10">
+        <label for="sample-fps">Sample FPS (frames per second of clip time)</label>
+        <input id="sample-fps" type="number" min="1" max="60" step="1" value="30">
+        <label for="reverse-order"><input id="reverse-order" type="checkbox"> Run Direct pass first (reverse order)</label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Metadata</legend>
+        <label for="sync-offset">Sync offset (seconds)</label>
+        <input id="sync-offset" type="number" step="0.001" value="0">
+        <label for="sync-convention">Sync convention (free text, e.g. which clock the offset applies to)</label>
+        <input id="sync-convention" type="text" placeholder="optional">
+        <label for="angle-convention">Angle convention (display metadata; exported angle values are interior)</label>
+        <select id="angle-convention">
+          <option value="clinical" selected>Clinical (flexion from straight)</option>
+          <option value="interior">Interior (3-point angle)</option>
+        </select>
+        <label for="exercise-select">Exercise (for phase / reps / quality)</label>
+        <select id="exercise-select"></select>
+      </fieldset>
+
+      <button id="run-btn" type="button">Run paired bench</button>
+      <button id="cancel-btn" type="button" disabled>Cancel</button>
+      <button id="export-btn" type="button" disabled>Export paired JSON</button>
+    </form>
+
+    <p id="bench-status" role="status" aria-live="polite">Choose a local clip to begin.</p>
+  </main>
+  <script type="module" src="./clip-runner.mjs"></script>
+</body>
+</html>
