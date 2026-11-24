@@ -2,6 +2,8 @@
 
 Baseline: Clearcam `0ae0ce4`. Scope: single-camera, browser-based tracking. Start with knee alignment in squats and sit-to-stand, then verify hip, ankle, shoulder, lunges, and single-leg balance separately.
 
+**Development decision:** Start with the clip runner and frame-level instrumentation. Browser replay supports concrete experiments for view-aware selection, fast overlay chase, input choice, and a worker. Default changes require the held-out reference and target-device results specified below. [Measurement report](2026-11-24-kinelab-joint-alignment-measurements.md)
+
 ## Recommendation
 
 Keep MediaPipe as the baseline. First measure how far the skeleton lands from the joint on the displayed video, how far its angle is from a matching reference, and how old the pose is when drawn. Compare Direct and Adaptive input on the same clips while testing confidence and view selection on the same detections. Move inference to a worker if it still blocks drawing after simpler changes. Consider an offline model or a second camera if the remaining problem is depth accuracy.
@@ -41,4 +43,6 @@ Proposed adoption criteria, to finalize after baseline variance is known:
 - **Filtering:** Seek at least 25% less static jitter with no more than one extra source frame of live peak delay and no more than 1° added peak bias. Require lower tail alignment error at reversals or occlusion recovery before increasing prediction.
 - **Speed:** Seek at least 15% lower p95 pose age at canvas submission in the affected device tier, with comparable valid-pose coverage, peak-angle error, and rep accuracy. For a worker, also require fewer late render frames and a functioning fallback. Set noninferiority margins from repeat-run variation before looking at the held-out set.
 
-Implementation order: baseline clip runner and stage timing → paired input/delegate A/B and offline confidence/view ablations → best small changes behind a flag → worker or new model only where measured bottlenecks remain. This investigation ran synthetic benchmarks. The real-video and real-device comparisons are the first implementation milestone.
+Implementation order: land the clip runner and stage timing first. Add paired input/delegate comparison and per-joint confidence/view experiments behind opt-in controls. Prototype fast chase and 20 ms prediction independently. Test a bounded worker with a freshness cutoff if rendering gaps remain after optimization. The existing app defaults are the control for each experiment.
+
+The first implementation milestone is complete when a run exports the same sampled frame IDs, sync offset, inference stages, angle sources, valid coverage, and rep events for both configurations, and when one repeatable test reproduces a known overlay projection, dropped interval, and reference angle. The first promotion decision needs participant-held-out reference clips and the phone matrix. The initial real-video data are a proxy and a small visual annotation sample. [Measurement report](2026-11-24-kinelab-joint-alignment-measurements.md)
