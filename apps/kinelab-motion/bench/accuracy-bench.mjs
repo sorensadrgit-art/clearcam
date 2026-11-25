@@ -3,6 +3,7 @@
  * candidate angle pipelines and reports knee-angle error, jitter and rep counts.
  * Usage: node bench/accuracy-bench.mjs [--json]
  */
+import { pathToFileURL } from 'node:url';
 import { generateSquatSequence } from './synthetic-pose.mjs';
 import { PoseFilter } from '../src/filters/pose-filter.mjs';
 import { KinematicBoneFilter } from '../src/filters/kinematic-filter.mjs';
@@ -67,12 +68,13 @@ export function runPipeline(seq, cfg) {
     let world = f.worldLandmarks;
     if (cfg.world !== 'off') world = wf.filter(world, f.timeMs);
     if (cfg.bone) world = bone.filter(world, f.timeMs);
-    const a2 = getJointAngles(lm, f.width, f.height);
+    const weights = cfg.dim === 'view' ? view.update(world, f.timeMs) : null;
+    const a2 = getJointAngles(lm, f.width, f.height, undefined, weights);
     const a3 = getJointAngles3D(world);
     let angles;
     if (cfg.dim === '2d') angles = a2;
     else if (cfg.dim === '3d') angles = { ...a2, ...Object.fromEntries(Object.entries(a3).filter(([, v]) => Number.isFinite(v))) };
-    else angles = blendAnglesByView(a2, a3, view.update(world, f.timeMs));
+    else angles = blendAnglesByView(a2, a3, weights);
     const knee = kneeFrom(angles, lm, cfg.side);
     times.push(f.timeMs);
     kneeSeries.push(Number.isFinite(knee) ? knee : null);
@@ -124,7 +126,7 @@ export function runSuite({ yaws = [0, 30, 45, 60, 90], seeds = [1, 2, 3, 4, 5] }
   return out;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const res = runSuite();
   if (process.argv.includes('--json')) { console.log(JSON.stringify(res, null, 1)); process.exit(0); }
   const yaws = Object.keys(Object.values(res)[0]);

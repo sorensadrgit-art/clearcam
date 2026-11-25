@@ -2,6 +2,7 @@
  * 2D projected joint angle calculations, geometric metrics, and confidence indicators.
  */
 
+import { SAGITTAL_ANGLE_KEYS } from './view-orientation.mjs';
 import { JOINTS, KEY_TRACKED_INDICES } from './landmark-indices.mjs';
 
 export const ANGLE_DEFINITIONS = Object.freeze([
@@ -65,11 +66,15 @@ export function angleUncertainty(a, b, c) {
 /**
  * Calculates joint angles for all 8 standard definitions.
  */
-export function getJointAngles(landmarks, width, height, threshold = 0.55) {
+export function getJointAngles(landmarks, width, height, threshold = 0.55, view = null) {
+  // Oblique views shorten horizontal displacement in the sagittal plane by cos(yaw).
+  const sagittalWidth = view?.sagittal2DWeight > 0 && Number.isFinite(view.yawDeg)
+    ? width / Math.cos(Math.min(55, Math.abs(view.yawDeg)) * Math.PI / 180) : width;
   return Object.fromEntries(
     ANGLE_DEFINITIONS.map(def => [
       def.key,
-      angleAt(landmarks?.[def.from], landmarks?.[def.joint], landmarks?.[def.to], width, height, threshold),
+      angleAt(landmarks?.[def.from], landmarks?.[def.joint], landmarks?.[def.to],
+        SAGITTAL_ANGLE_KEYS.includes(def.key) ? sagittalWidth : width, height, threshold),
     ])
   );
 }

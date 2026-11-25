@@ -45,7 +45,7 @@ function sourceFor(key, a2, a3, mode, view) {
  * @returns {{ angles: Object, sources: Object<'2d'|'3d'|'blend'|null>|null }}
  */
 export function computeFrameAngles({ landmarks, worldLandmarks, width, height, threshold, mode = 'auto', view = null, includeSources = true }) {
-  const angles2D = getJointAngles(landmarks, width, height, threshold);
+  const angles2D = getJointAngles(landmarks, width, height, threshold, mode === 'auto' && worldLandmarks ? view : null);
 
   if (mode === '2d' || !worldLandmarks) {
     return {

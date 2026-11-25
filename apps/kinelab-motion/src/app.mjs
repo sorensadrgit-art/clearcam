@@ -821,7 +821,7 @@ function setLiveUI(isLive) {
   nodes.recordBtn.disabled = !isLive;
   nodes.modelChoice.disabled = isLive || appState.starting;
   nodes.captureLabel.classList.toggle('is-live', isLive);
-  nodes.captureLabel.lastElementChild.textContent = isLive ? 'LIVE' : 'OFFLINE';
+  nodes.captureLabel.lastElementChild.textContent = isLive ? 'LIVE' : (appState.starting ? 'STARTING' : 'OFFLINE');
   nodes.empty.hidden = isLive;
 }
 
@@ -995,8 +995,9 @@ function analysisFrames(session) {
 function rawJointAngles(rawResult, video, cfg, view, now) {
   if (!rawResult?.landmarks) return null;
   const thr = cfg.tracking.confidenceThreshold;
-  const a2 = getJointAngles(rawResult.landmarks, video.videoWidth, video.videoHeight, thr);
   const mode = cfg.tracking.angleDimension;
+  const a2 = getJointAngles(rawResult.landmarks, video.videoWidth, video.videoHeight, thr,
+    mode === 'auto' && rawResult.worldLandmarks ? view : null);
   if (mode === '2d' || !rawResult.worldLandmarks) return a2;
   const a3 = getJointAngles3D(rawKinematicFilter.filter(rawResult.worldLandmarks, now), thr);
   if (mode === 'auto') return blendAnglesByView(a2, a3, view);

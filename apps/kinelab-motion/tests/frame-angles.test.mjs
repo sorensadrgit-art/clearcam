@@ -252,3 +252,15 @@ test('numeric behavior matches the pre-extraction selection for all modes and vi
     }
   }
 });
+
+test('auto mode recovers a sagittal knee angle from an oblique camera view', () => {
+  const yawDeg = 30;
+  const projected = 0.2 * Math.cos(yawDeg * Math.PI / 180);
+  const landmarks = pose2D('leftKnee', [p2(0.5, 0.3), p2(0.5, 0.5), p2(0.5 + projected, 0.7)]);
+  const frame = {
+    landmarks, worldLandmarks: [], width: 720, height: 720,
+    view: { yawDeg, sagittal2DWeight: 1 },
+  };
+  assert.equal(computeFrameAngles(frame).angles.leftKnee, 135);
+  assert.ok(computeFrameAngles({ ...frame, mode: '2d' }).angles.leftKnee > 135);
+});

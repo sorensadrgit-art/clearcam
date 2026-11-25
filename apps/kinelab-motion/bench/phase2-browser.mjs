@@ -168,8 +168,8 @@ async function runInPage(mode, config, encoded) {
     byId('model-choice').value = 'full';
     byId('model-choice').dispatchEvent(new Event('change'));
     byId('start-button').click();
-    for (let i = 0; i < 200 && byId('stop-button').disabled; i++) await wait(100);
-    if (byId('stop-button').disabled) throw new Error('Live camera path did not start.');
+    for (let i = 0; i < 200 && byId('record-button').disabled; i++) await wait(100);
+    if (byId('record-button').disabled) throw new Error('Live camera path did not start.');
     const timing = globalThis.kinelabTiming;
     if (!timing) throw new Error('Missing live timing API. Run against the Phase 2 implementation.');
     await wait(1800);
