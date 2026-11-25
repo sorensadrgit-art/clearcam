@@ -93,6 +93,7 @@ a { color: inherit; text-decoration: none; }
   border: 1px solid #253247; border-radius: 12px; overflow: hidden; isolation: isolate;
   min-height: 230px; max-height: 70vh; margin-inline: auto;
 }
+.follow-layer { position: absolute; inset: 0; transition: transform 280ms ease-out; }
 .stage video, .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .stage video { background: #080f19; }
 .stage canvas { pointer-events: none; z-index: 2; }

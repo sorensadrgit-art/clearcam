@@ -4,6 +4,7 @@
  * modular exercise recognition, real-time overlays, settings, and session analytics.
  */
 
+import { subjectBounds, followTransform } from './tracking/auto-frame.mjs';
 import { ANGLE_DEFINITIONS, SKELETON_CONNECTIONS } from './pose-math.mjs';
 import {
   getJointAngles,
@@ -55,6 +56,7 @@ const nodes = {
   video: el('camera-video'),
   canvas: el('pose-canvas'),
   stage: el('video-stage'),
+  followLayer: el('follow-layer'),
   empty: el('stage-empty'),
   startBtn: el('start-button'),
   stopBtn: el('stop-button'),
@@ -245,17 +247,18 @@ const SHOULDER_EXERCISES = new Set(['shoulder_abduction', 'shoulder_flexion']);
 const normalizeExerciseId = id => String(id || '').replace(/-/g, '_');
 const UI_INTERVAL_MS = 80; // ~12 Hz is plenty for numbers; avoids rebuilding DOM at inference rate
 
-/** Vertical extent of the reliably detected body, in normalized image units. */
-function subjectExtent(landmarks, minVisibility) {
-  if (!Array.isArray(landmarks)) return null;
-  let lo = Infinity;
-  let hi = -Infinity;
-  for (const p of landmarks) {
-    if (!p || !Number.isFinite(p.y) || (p.visibility ?? 1) < minVisibility) continue;
-    if (p.y < lo) lo = p.y;
-    if (p.y > hi) hi = p.y;
+let lastSubjectAt = -Infinity;
+
+function updateAutoFrame(bounds, now, video) {
+  const mirrored = video.style.transform === 'scaleX(-1)';
+  const aspect = nodes.stage.clientWidth / nodes.stage.clientHeight;
+  const transform = followTransform(bounds, video.videoWidth / video.videoHeight, aspect, mirrored);
+  if (transform) {
+    lastSubjectAt = now;
+    nodes.followLayer.style.transform = transform;
+  } else if (now - lastSubjectAt > 650) {
+    nodes.followLayer.style.transform = '';
   }
-  return hi > lo ? hi - lo : null;
 }
 
 // UI Angle Row Cache
@@ -710,7 +713,9 @@ function processFrame(video, callNow, metadata) {
     filter.setVisibilityThreshold(cfg.tracking.confidenceThreshold);
     const smoothedLandmarks = filter.filter(rawResult.landmarks, now);
 
-    runner.setSubjectExtent(subjectExtent(smoothedLandmarks, cfg.tracking.confidenceThreshold));
+    const bounds = subjectBounds(smoothedLandmarks, cfg.tracking.confidenceThreshold);
+    runner.setSubjectExtent(bounds ? bounds.bottom - bounds.top : null);
+    updateAutoFrame(rawResult.landmarks ? bounds : null, now, video);
 
     // 3D world landmarks: temporal smoothing (depth is the noisiest axis), then
     // the bone-length constraint.
@@ -861,6 +866,8 @@ function stopCamera() {
   }
   appState.stream = null;
 
+  nodes.followLayer.style.transform = '';
+  lastSubjectAt = -Infinity;
   nodes.video.pause();
   nodes.video.srcObject = null;
   runner.close();

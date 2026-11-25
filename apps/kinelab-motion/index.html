@@ -62,8 +62,10 @@
           </div>
 
           <div class="stage" id="video-stage">
-            <video id="camera-video" autoplay muted playsinline aria-label="Live camera preview"></video>
-            <canvas id="pose-canvas" aria-label="Body pose skeleton with measured angles" role="img"></canvas>
+            <div class="follow-layer" id="follow-layer">
+              <video id="camera-video" autoplay muted playsinline aria-label="Live camera preview"></video>
+              <canvas id="pose-canvas" aria-label="Body pose skeleton with measured angles" role="img"></canvas>
+            </div>
 
             <div class="stage-empty" id="stage-empty">
               <div class="empty-visual" aria-hidden="true">
